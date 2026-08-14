@@ -740,7 +740,10 @@ function readSessionLog(file, onLine) {
   }
   return n;
 }
+var MAX_JS_DECODE_BYTES = 512 * 1024 * 1024;
 function readSessionLogJs(file, onLine) {
+  const stat = statSync(file);
+  if (stat.size > MAX_JS_DECODE_BYTES) throw new Error("session log too large for js decoder: " + stat.size + " bytes");
   const out = decompress(new Uint8Array(readFileSync2(file)));
   const text = Buffer.from(out).toString("utf8");
   let n = 0;
