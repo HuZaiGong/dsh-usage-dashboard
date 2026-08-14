@@ -67,7 +67,7 @@ overview(range: 'all' | 'day' | 'week' | 'month') => {
   summary: {
     sessions, calls, turns,
     tokens: { uncachedInput, cacheRead, cacheWrite, output, reasoning, total },
-    costEstimateUsd, cacheHitRate,           // 命中率 = cacheRead / (uncachedInput + cacheRead)
+    costEstimateUsd, cacheHitRate,           // 命中率 = cacheRead / (uncachedInput + cacheRead + cacheWrite)
     firstActivityAt, lastActivityAt, scannedAt,
   },
   buckets: [{ key: 'YYYY-MM-DD', calls, tokens: {...} }],   // 按天桶（range=day 按小时）

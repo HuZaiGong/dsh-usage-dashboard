@@ -194,7 +194,7 @@ function TrendChart({ buckets, t }) {
       "div",
       { key: b.key, className: "uds-barCol", title },
       React.createElement("div", { className: "uds-barInner", style: { height: b.total / max * 100 + "%" } }, parts),
-      React.createElement("div", { className: "uds-barLabel" }, b.key.slice(5))
+      React.createElement("div", { className: "uds-barLabel" }, b.key.length > 10 ? b.key.slice(5) : b.key)
     );
   });
   const legend = CHART_SEGMENTS.map((s) => React.createElement(
