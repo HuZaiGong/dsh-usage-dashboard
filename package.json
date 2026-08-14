@@ -1,6 +1,6 @@
 {
   "name": "@huzaigong/dsh-usage-dashboard",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Whole-DSH usage aggregation: total tokens/cost across all sessions & workspaces, shown in Web Settings.",
   "type": "module",
   "main": "dist/index.js",
