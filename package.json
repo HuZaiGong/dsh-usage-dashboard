@@ -34,7 +34,8 @@
     "link-deps": "bash scripts/link-deps.sh"
   },
   "dependencies": {
-    "@deepseek-ai/dsh-typert-protocol": "^0.1.0-rc.6"
+    "@deepseek-ai/dsh-typert-protocol": "^0.1.0-rc.6",
+    "fzstd": "^0.1.1"
   },
   "devDependencies": {
     "esbuild": "^0.24.2"

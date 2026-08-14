@@ -9,10 +9,11 @@
 
 - 全局汇总卡片：总 tokens（输入/输出细分）、估算花费、请求数、会话数、缓存命中率
 - 按天堆叠趋势图（未缓存输入 / 缓存读 / 缓存写 / 输出）
-- 排行表：按会话（含工作区）、按模型（provider/model），**表头点击排序**（会话/请求数/tokens/花费/活动时间）
+- 排行表：按会话（含工作区）、按模型（provider/model），**表头点击排序** + **一键展开全部**（默认截断 15/10 行）
+- 时间范围切换：全部 / 近 7 天 / 近 30 天（柱状图按天）；**近 24 小时按小时桶**
 - 子代理会话自动标记（delegationDepth>0）；上下文压缩（compaction）用量纳入统计
 - 增量实时：监听会话事件，有活动时自动重扫（无需手动刷新）
-- 时间范围切换：全部 / 近 7 天 / 近 30 天；手动刷新（增量重扫）
+- 手动刷新（增量重扫）
 - 命中率口径与官方 stats strip 一致：cacheRead / (uncached + cacheRead + cacheWrite)
 - 风格使用 DSH 设计令牌（--dsw-alias-* / --ds-font-family-code），styles.insert() 注入
 
@@ -27,7 +28,7 @@
 
 - `lib/scan.js` — 扫描 `$DSH_HOME/sessions/**/session.jsonl.zstd`，mtime/size 增量，清理已删除会话
 - `lib/aggregate.js` — 解析 + 按 (turn, step) 去重 + 维度聚合（含 range 过滤）
-- `lib/pricing.js` — 价格表驱动的成本估算
+- `lib/pricing.js` — 价格表驱动成本估算（内置 + models.dev + 配置文件覆盖）
 - `lib/index.js` — Host：`usageStats` remote 服务（TypertRemoteService）
 - `lib/client.js` — Browser：Settings 用量统计页（DSH 风格可视化看板）
 
@@ -81,5 +82,6 @@ import("./lib/scan.js").then(async (scan) => {
 - [x] v0.2 compaction/summary 压缩用量纳入统计
 - [x] v0.2 子代理会话识别（delegationDepth 标记）
 - [x] v0.2 zstd 缺失探测与友好报错
-- [ ] M3 成本表完善（models.dev 动态价格）
+- [x] 成本价格表：内置 DeepSeek 常量 + models.dev 动态拉取（超时静默回退）+ `$DSH_HOME/usage-prices.json` 配置覆盖；未计价模型在 UI 提示
+- [x] zstd 解码回退：系统 zstd 缺失时自动改用纯 JS（fzstd）解码（完整流与 CLI 一致）
 - [x] 安装进 web profile 实测（Host RPC + Settings 看板均已在运行实例验证）

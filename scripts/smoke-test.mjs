@@ -1,6 +1,6 @@
 // smoke-test.mjs — 纯函数冒烟测试（CI 用）：不依赖 dsh 安装，不读真实会话。
 // 覆盖：JSONL 解析、(turn,step) 去重、sumUsage 聚合、价格表成本估算。
-import { extractUsage, sumUsage, bucketByDay } from '../lib/aggregate.js'
+import { extractUsage, sumUsage, bucketByDay, bucketByHour } from '../lib/aggregate.js'
 import { estimateCost } from '../lib/pricing.js'
 
 let failures = 0
@@ -44,6 +44,11 @@ eq(Math.abs(cost - expect) < 1e-12, true, 'cost estimate = ' + expect.toFixed(6)
 const buckets = bucketByDay(records)
 eq(buckets.length, 1, 'single-day bucketing')
 eq(buckets[0].total, s.calls === 3 ? s.uncachedInput + s.cacheRead + s.cacheWrite + s.output : -1, 'bucket total matches')
+
+// 小时桶：3 条记录在同一小时内 → 1 个桶，key 为 YYYY-MM-DD HH:00
+const hb = bucketByHour(records)
+eq(hb.length, 1, 'hourly bucket single')
+eq(/^\d{4}-\d{2}-\d{2} \d{2}:00$/.test(hb[0].key), true, 'hourly key format')
 
 if (failures > 0) {
   console.error(failures + ' failure(s)')

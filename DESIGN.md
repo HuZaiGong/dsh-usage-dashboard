@@ -88,8 +88,9 @@ refresh()  => { scanned, changed, ms }   // 强制重扫（增量）
    **v0.2 补充**：`compaction/summary`（上下文压缩）无 turn/step，以 `compactionId`
    去重并计入压缩消耗（实测单次可达 77k input tokens，不可忽略）。
 3. **子代理**：v0.1 扫描全部会话目录；**v0.2 已识别子代理**（`session` 事件的 `delegationDepth>0`，UI 加"子代理"标记，overview 返回 `subagentSessions`）。已知风险：父会话 toolResult 可能重复携带子代理用量——当前数据无子代理会话，待实测后决定 runId 去重策略。
-4. **成本**：价格表驱动估算——内置 DeepSeek 官方定价常量（in/out/cache_read/cache_write
-   四档），支持配置覆盖；`costEstimate` 明确标注为估算。
+4. **成本**：价格表驱动估算，优先级 **配置文件覆盖 > models.dev 动态拉取 > 内置 DeepSeek 常量**；
+   models.dev 拉取带 5s 超时、失败静默回退不阻塞；`costEstimate` 明确标注为估算。
+   未计价模型（无价格条目）在 UI 提示数量。
 5. **性能**：首扫全量（实测 8 会话、~35M tokens 秒级）；之后按文件 mtime/size 增量；
    聚合结果常驻内存，必要时 JSON 检查点。
 6. **实时性**：v0.1 打开页面/手动刷新时重扫；v0.2 监听 `session/*` 事件增量更新。
@@ -123,7 +124,7 @@ dsh --profile web --dump-config         # 验证 "@huzhaigong/dsh-usage-dashboar
 - **M0 核心聚合库**（已完成大半）：scan.js + aggregate.js，CLI 自测通过
 - **M1 Host 服务**：UsageStatsGateway + cordis.patch.yml + 安装进 web profile 验证装配
 - **M2 Client 页 v0.1**：只读展示（卡片 + 趋势 + 排行），remote 直连
-- **M3 增强**：~~增量刷新事件钩子~~（v0.2 已实现：session/event 订阅 + 节流合并）、~~排序筛选~~（v0.2 已实现：表头排序）、价格表/成本估算完善（models.dev，待做）
+- **M3 增强**：~~增量刷新事件钩子~~（session/event 订阅 + 节流合并）、~~排序筛选~~（表头排序 + 展开全部）、~~成本表~~（内置 + models.dev 动态 + 配置覆盖，未计价提示）
 - **M4 打磨**：多语言、主题适配、打包发布（`.dsh-plugin`）
 
 ## 10. 风险与待确认（构建前用 cordis_inspect 核实）
@@ -131,7 +132,7 @@ dsh --profile web --dump-config         # 验证 "@huzhaigong/dsh-usage-dashboar
 - [ ] `settings.section` 的注册协议/owner props（v0.1 可先挂 `settings.<domain>.tab`）
 - [ ] bundle 内双面包（node + `dsh.client` 浏览器半）的确切解析方式
 - [ ] `@Remote` 装饰器需构建步骤：esbuild（TC39 装饰器）或仓库同款 tsc 配置
-- [x] zstd 缺失探测（`zstdAvailable()`，缺失时 scan 返回友好错误）；[ ] wasm 绑定消除外部依赖（可选后续）
+- [x] zstd 缺失探测 + **fzstd 纯 JS 回退解码**（完整流与 CLI 输出一致；写入中不完整流少尾部数据，增量重读补齐）
 - [ ] 子代理用量重复计数口径（v0.2）
 - [ ] client 端 styles 服务签名已在 client-runtime 核实（styles.insert(css)）
 

@@ -103,6 +103,9 @@ var dicts = {
     tableCost: "Cost",
     tableActivity: "Last activity",
     subagent: "subagent",
+    showAll: "Show all",
+    collapse: "Collapse",
+    unpriced: "unpriced models",
     loading: "Loading\u2026"
   },
   zh: {
@@ -129,6 +132,9 @@ var dicts = {
     tableCost: "\u82B1\u8D39",
     tableActivity: "\u6700\u540E\u6D3B\u52A8",
     subagent: "\u5B50\u4EE3\u7406",
+    showAll: "\u663E\u793A\u5168\u90E8",
+    collapse: "\u6536\u8D77",
+    unpriced: "\u4E2A\u6A21\u578B\u672A\u8BA1\u4EF7",
     loading: "\u52A0\u8F7D\u4E2D\u2026"
   }
 };
@@ -214,7 +220,7 @@ function TrendChart({ buckets, t }) {
       "div",
       { key: b.key, className: "uds-barCol", title },
       React.createElement("div", { className: "uds-barInner", style: { height: b.total / max * 100 + "%" } }, parts),
-      React.createElement("div", { className: "uds-barLabel" }, b.key.length > 10 ? b.key.slice(5) : b.key)
+      React.createElement("div", { className: "uds-barLabel" }, b.key.length === 16 ? b.key.slice(11) : b.key.length > 10 ? b.key.slice(5) : b.key)
     );
   });
   const legend = CHART_SEGMENTS.map((s) => React.createElement(
@@ -231,7 +237,9 @@ function TrendChart({ buckets, t }) {
   );
 }
 function SessionTable({ sessions, t, sort, onSort }) {
-  const rows = sorted(sessions, sort).slice(0, 15).map((s) => React.createElement(
+  const [showAll, setShowAll] = React.useState(false);
+  const LIMIT = 15;
+  const rows = sorted(sessions, sort).slice(0, showAll ? sessions.length : LIMIT).map((s) => React.createElement(
     "tr",
     { key: s.sessionId },
     React.createElement(
@@ -265,11 +273,18 @@ function SessionTable({ sessions, t, sort, onSort }) {
         React.createElement(SortTh, { label: t("tableActivity"), sortKey: "lastActivityAt", sort, onSort })
       )),
       React.createElement("tbody", null, rows)
-    )
+    ),
+    sessions.length > LIMIT ? React.createElement(
+      "button",
+      { type: "button", className: "uds-refresh", style: { marginTop: 8 }, onClick: () => setShowAll(!showAll) },
+      showAll ? t("collapse") : t("showAll") + " (" + sessions.length + ")"
+    ) : null
   );
 }
 function ModelTable({ models, t, sort, onSort }) {
-  const rows = sorted(models, sort).slice(0, 10).map((m) => React.createElement(
+  const [showAll, setShowAll] = React.useState(false);
+  const LIMIT = 10;
+  const rows = sorted(models, sort).slice(0, showAll ? models.length : LIMIT).map((m) => React.createElement(
     "tr",
     { key: m.provider + "/" + m.model },
     React.createElement("td", { className: "uds-cellMain" }, m.model + " \xB7 " + m.provider),
@@ -294,7 +309,12 @@ function ModelTable({ models, t, sort, onSort }) {
         React.createElement(SortTh, { label: t("tableCost"), sortKey: "costEstimateUsd", sort, onSort })
       )),
       React.createElement("tbody", null, rows)
-    )
+    ),
+    models.length > LIMIT ? React.createElement(
+      "button",
+      { type: "button", className: "uds-refresh", style: { marginTop: 8 }, onClick: () => setShowAll(!showAll) },
+      showAll ? t("collapse") : t("showAll") + " (" + models.length + ")"
+    ) : null
   );
 }
 function UsageStatsSection(props) {
@@ -389,6 +409,11 @@ function UsageStatsSection(props) {
       React.createElement("h4", { className: "uds-sectionTitle" }, t("tableSession")),
       React.createElement(SessionTable, { sessions: state.data.sessions, t, sort: sortSessions, onSort: makeSorter(setSortSessions) }),
       React.createElement("h4", { className: "uds-sectionTitle" }, t("tableModel")),
+      s.unpricedModels > 0 ? React.createElement(
+        "div",
+        { className: "uds-caption", style: { marginBottom: 8 } },
+        s.unpricedModels + " " + t("unpriced")
+      ) : null,
       React.createElement(ModelTable, { models: state.data.models, t, sort: sortModels, onSort: makeSorter(setSortModels) })
     )
   );
