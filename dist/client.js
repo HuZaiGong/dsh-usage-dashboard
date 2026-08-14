@@ -90,6 +90,7 @@ var dicts = {
     refreshing: "Refreshing\u2026",
     scannedAt: "Last scanned",
     rangeAll: "All",
+    rangeDay: "24h",
     rangeWeek: "7 days",
     rangeMonth: "30 days",
     legendUncached: "Uncached in",
@@ -119,6 +120,7 @@ var dicts = {
     refreshing: "\u5237\u65B0\u4E2D\u2026",
     scannedAt: "\u6700\u540E\u626B\u63CF",
     rangeAll: "\u5168\u90E8",
+    rangeDay: "\u8FD1 24 \u5C0F\u65F6",
     rangeWeek: "\u8FD1 7 \u5929",
     rangeMonth: "\u8FD1 30 \u5929",
     legendUncached: "\u672A\u7F13\u5B58\u8F93\u5165",
@@ -266,7 +268,7 @@ function SessionTable({ sessions, t, sort, onSort }) {
       React.createElement("thead", null, React.createElement(
         "tr",
         null,
-        React.createElement(SortTh, { label: t("tableSession"), sortKey: "lastActivityAt", sort, onSort }),
+        React.createElement(SortTh, { label: t("tableSession"), sortKey: "sessionId", sort, onSort }),
         React.createElement(SortTh, { label: t("calls"), sortKey: "calls", sort, onSort }),
         React.createElement(SortTh, { label: t("tableTokens"), sortKey: "total", sort, onSort }),
         React.createElement(SortTh, { label: t("tableCost"), sortKey: "costEstimateUsd", sort, onSort }),
@@ -302,7 +304,7 @@ function ModelTable({ models, t, sort, onSort }) {
       React.createElement("thead", null, React.createElement(
         "tr",
         null,
-        React.createElement(SortTh, { label: t("tableModel"), sortKey: "total", sort, onSort }),
+        React.createElement(SortTh, { label: t("tableModel"), sortKey: "model", sort, onSort }),
         React.createElement(SortTh, { label: t("calls"), sortKey: "calls", sort, onSort }),
         React.createElement(SortTh, { label: t("tableTokens"), sortKey: "total", sort, onSort }),
         React.createElement(SortTh, { label: t("hitRate"), sortKey: "cacheHitRate", sort, onSort }),
@@ -374,7 +376,7 @@ function UsageStatsSection(props) {
         React.createElement(
           "div",
           { className: "uds-segmented" },
-          ["all", "week", "month"].map((r) => React.createElement("button", {
+          ["all", "day", "week", "month"].map((r) => React.createElement("button", {
             key: r,
             type: "button",
             "data-active": range === r,

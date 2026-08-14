@@ -893,8 +893,14 @@ var DEFAULT_PRICES = {
   "deepseek-v4": { uncachedInput: 2, cacheRead: 0.5, cacheWrite: 2.5, output: 8 },
   "deepseek-v3": { uncachedInput: 2, cacheRead: 0.5, cacheWrite: 2.5, output: 8 }
 };
+var sortedCache = /* @__PURE__ */ new WeakMap();
 function sortedEntries(table) {
-  return Object.entries(table).sort((a, b) => b[0].length - a[0].length);
+  let cached = sortedCache.get(table);
+  if (cached === void 0) {
+    cached = Object.entries(table).sort((a, b) => b[0].length - a[0].length);
+    sortedCache.set(table, cached);
+  }
+  return cached;
 }
 function lookupPrice(model, table = DEFAULT_PRICES) {
   if (!model) return null;
@@ -925,26 +931,33 @@ function loadConfigPrices(home) {
     return {};
   }
 }
+function normalizeModelsDevTable(data) {
+  const table = {};
+  for (const [id, m] of Object.entries(data)) {
+    const c = m && m.cost;
+    if (!c) continue;
+    const row = {
+      uncachedInput: Number(c.input ?? 0),
+      cacheRead: Number(c.cache_read ?? 0),
+      cacheWrite: Number(c.cache_write ?? 0),
+      output: Number(c.output ?? 0)
+    };
+    if (row.uncachedInput || row.cacheRead || row.cacheWrite || row.output) {
+      const key = id.toLowerCase();
+      table[key] = row;
+      const slash = key.lastIndexOf("/");
+      if (slash > 0 && slash < key.length - 1) table[key.slice(slash + 1)] = row;
+    }
+  }
+  return table;
+}
 async function fetchModelsDev(timeoutMs = 5e3) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch("https://models.dev/api.json", { signal: ctrl.signal });
     if (!res.ok) return null;
-    const data = await res.json();
-    const table = {};
-    for (const [id, m] of Object.entries(data)) {
-      const c = m && m.cost;
-      if (!c) continue;
-      const row = {
-        uncachedInput: Number(c.input ?? 0),
-        cacheRead: Number(c.cache_read ?? 0),
-        cacheWrite: Number(c.cache_write ?? 0),
-        output: Number(c.output ?? 0)
-      };
-      if (row.uncachedInput || row.cacheRead || row.cacheWrite || row.output) table[id.toLowerCase()] = row;
-    }
-    return table;
+    return normalizeModelsDevTable(await res.json());
   } catch {
     return null;
   } finally {
@@ -989,10 +1002,21 @@ var UsageStatsGateway = class extends (_a = TypertRemoteService, _overview_dec =
     }));
     this.ready = Promise.resolve().then(() => this.scan()).catch((err2) => ({ scanned: 0, changed: 0, removed: 0, ms: 0, error: String(err2 && err2.message || err2) }));
   }
-  /** 扫描目录：增量重读变化文件、清理已删除会话。返回 { scanned, changed, removed, ms }。 */
+  /** 扫描目录（并发互斥：事件钩子/手动刷新/overview 重叠时排队执行）。 */
   async scan() {
+    if (this._scanning) return this._scanning;
+    this._scanning = this._doScan();
+    try {
+      return await this._scanning;
+    } finally {
+      this._scanning = null;
+    }
+  }
+  /** 实际扫描：增量重读变化文件、清理已删除会话。返回 { scanned, changed, removed, ms }。 */
+  async _doScan() {
     const t0 = Date.now();
-    const useCli = zstdAvailable();
+    if (this._zstdOk === void 0) this._zstdOk = zstdAvailable();
+    const useCli = this._zstdOk;
     const readLog = useCli ? readSessionLog : readSessionLogJs;
     let files;
     try {
