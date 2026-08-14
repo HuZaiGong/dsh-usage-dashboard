@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 设计文档
+    url: https://github.com/HuZaiGong/dsh-usage-dashboard/blob/main/DESIGN.md
+    about: 提交 Issue 前可先查看架构与数据语义设计
+  - name: 贡献指南
+    url: https://github.com/HuZaiGong/dsh-usage-dashboard/blob/main/CONTRIBUTING.md
+    about: 想直接改代码？先看开发环境与提交规范

@@ -1,5 +1,7 @@
 # @huzhaigong/dsh-usage-dashboard（雏形）
 
+![build](https://github.com/HuZaiGong/dsh-usage-dashboard/actions/workflows/build.yml/badge.svg) ![license](https://img.shields.io/badge/license-MIT-blue.svg) ![dsh](https://img.shields.io/badge/dsh-0.1.0--rc.6-blueviolet)
+
 全 DSH 用量汇总插件：把**所有工作区 × 所有会话**的 LLM 用量聚合成看板，
 展示在 Web Settings 的"用量统计"页。
 
@@ -13,6 +15,11 @@
 - 风格使用 DSH 设计令牌（--dsw-alias-* / --ds-font-family-code），styles.insert() 注入
 
 设计文档见 [DESIGN.md](./DESIGN.md)。
+
+## 社区
+
+- [贡献指南](./CONTRIBUTING.md) · [行为准则](./CODE_OF_CONDUCT.md) · [安全策略](./SECURITY.md)
+- [提交 Issue](https://github.com/HuZaiGong/dsh-usage-dashboard/issues/new/choose)（Bug / 功能建议有模板）
 
 ## 结构
 

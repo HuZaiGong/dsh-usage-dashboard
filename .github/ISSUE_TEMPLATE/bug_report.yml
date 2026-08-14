@@ -1,0 +1,47 @@
+name: Bug 报告
+description: 提交一个可复现的问题
+title: "[bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量提供完整信息，方便快速定位。
+  - type: textarea
+    id: describe
+    attributes:
+      label: 问题描述
+      description: 发生了什么？期望是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 复现步骤
+      description: 最小复现步骤（1. 2. 3.）
+      placeholder: |
+        1. 打开 dsh web
+        2. 进入 设置 → 用量统计
+        3. 点击刷新，控制台报错
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 错误信息 / 日志
+      description: 浏览器控制台红色报错原文、dsh 日志（/tmp/dsh-web.log 等）
+      render: text
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: dsh 版本、Node 版本、浏览器（如 dsh 0.1.0-rc.6 / Node 20 / Chrome 120）
+      placeholder: dsh 0.1.0-rc.6 / Node v20 / Chrome 120
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 插件版本
+      description: 包版本或 git commit（npm 发布后生效）
+      placeholder: 0.1.0 或 493a520
