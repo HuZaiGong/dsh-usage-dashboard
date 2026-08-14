@@ -1,4 +1,4 @@
-# @huzhaigong/dsh-usage-dashboard（雏形）
+# @huzaigong/dsh-usage-dashboard（雏形）
 
 ![build](https://github.com/HuZaiGong/dsh-usage-dashboard/actions/workflows/build.yml/badge.svg) ![license](https://img.shields.io/badge/license-MIT-blue.svg) ![dsh](https://img.shields.io/badge/dsh-0.1.0--rc.6-blueviolet)
 

@@ -1,6 +1,6 @@
 # 贡献指南
 
-欢迎为 **@huzhaigong/dsh-usage-dashboard** 贡献代码、文档或想法！请先阅读 [README](./README.md) 和 [DESIGN](./DESIGN.md) 了解项目目标与架构。
+欢迎为 **@huzaigong/dsh-usage-dashboard** 贡献代码、文档或想法！请先阅读 [README](./README.md) 和 [DESIGN](./DESIGN.md) 了解项目目标与架构。
 
 ## 开发环境
 

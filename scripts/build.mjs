@@ -20,7 +20,7 @@ await build({
 // factory 内声明 var React = require('react')，让 lib/client.js 的裸 React 引用
 // 在运行时由 __ModuleLoader__ 解析（react 是平台 seed 词，官方 client 插件同款用法）。
 const clientBanner = `window.__ModuleLoader__.load({
-	id: '@huzhaigong/dsh-usage-dashboard',
+	id: '@huzaigong/dsh-usage-dashboard',
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;

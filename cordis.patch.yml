@@ -1,4 +1,4 @@
-# @huzhaigong/dsh-usage-dashboard bundle layer.
+# @huzaigong/dsh-usage-dashboard bundle layer.
 # Applied after @deepseek-ai/dsh-web-app in the profile's bundles list.
 # One host row: the usageStats remote service (machine-global, cross-session).
 #
@@ -7,4 +7,4 @@
 # dist/client.js into the browser roster (window.__DSH_BOOT__ modules table).
 - insert:
     - id: usage-stats
-      name: '@huzhaigong/dsh-usage-dashboard'
+      name: '@huzaigong/dsh-usage-dashboard'

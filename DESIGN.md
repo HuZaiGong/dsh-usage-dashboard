@@ -1,4 +1,4 @@
-# @huzhaigong/dsh-usage-dashboard — 设计文档（v0.1 雏形）
+# @huzaigong/dsh-usage-dashboard — 设计文档（v0.1 雏形）
 
 > 目标：一个 DSH 插件，把**整个 DSH 安装**（全部工作区 × 全部会话）的 LLM 用量聚合成一个可浏览的看板：
 > 总 tokens（按输入/输出/缓存读/缓存写细分）、估算花费、请求数、缓存命中率、按会话/模型/日期排行。
@@ -23,7 +23,7 @@ sessions … stays host-side"），不放进任何 agent preset：
 - 不占模型上下文、不进工具目录
 - 一个进程一个实例，正好匹配 `TypertRemoteService` 的提供语义
 
-装配顺序：`@deepseek-ai/dsh-base` → `@deepseek-ai/dsh-web-app` → **`@huzhaigong/dsh-usage-dashboard`** → profile 自己的 `cordis.patch.yml`。
+装配顺序：`@deepseek-ai/dsh-base` → `@deepseek-ai/dsh-web-app` → **`@huzaigong/dsh-usage-dashboard`** → profile 自己的 `cordis.patch.yml`。
 
 ## 3. 架构
 
@@ -115,7 +115,7 @@ refresh()  => { scanned, changed, ms }   // 强制重扫（增量）
 cd /root/DSH/plugins/dsh-usage-dashboard
 pnpm install && pnpm build
 dsh plugin --profile web add .          # 追加进 web profile 的 bundles
-dsh --profile web --dump-config         # 验证 "@huzhaigong/dsh-usage-dashboard" 层生效
+dsh --profile web --dump-config         # 验证 "@huzaigong/dsh-usage-dashboard" 层生效
 # 重启 dsh web 后生效（组合层静态装配）
 ```
 
