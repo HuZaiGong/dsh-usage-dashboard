@@ -171,9 +171,15 @@ function sumUsage(records) {
 }
 function bucketByDay(records) {
   const buckets = /* @__PURE__ */ new Map();
+  const keyOf = (ms) => {
+    const d = new Date(ms);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  };
   for (const r of records) {
-    const d = r.atMs ? new Date(r.atMs) : null;
-    const key = d ? d.toISOString().slice(0, 10) : "unknown";
+    const key = r.atMs ? keyOf(r.atMs) : "unknown";
     if (!buckets.has(key)) buckets.set(key, []);
     buckets.get(key).push(r);
   }
@@ -234,7 +240,7 @@ var UsageStatsGateway = class extends (_a = TypertRemoteService, _overview_dec =
     this.cache = {};
     this.sessions = /* @__PURE__ */ new Map();
     this.scannedAt = null;
-    this.ready = Promise.resolve().then(() => this.scan());
+    this.ready = Promise.resolve().then(() => this.scan()).catch((err) => ({ scanned: 0, changed: 0, removed: 0, ms: 0, error: String(err && err.message || err) }));
   }
   /** 扫描目录：增量重读变化文件、清理已删除会话。返回 { scanned, changed, removed, ms }。 */
   async scan() {
@@ -273,6 +279,7 @@ var UsageStatsGateway = class extends (_a = TypertRemoteService, _overview_dec =
     return range && range !== "all" ? filterByRange(out, range, now) : out;
   }
   async overview(args) {
+    await this.ready;
     const now = Date.now();
     const range = args && args.range || "all";
     const all = this._allRecords(range, now);
@@ -295,12 +302,15 @@ var UsageStatsGateway = class extends (_a = TypertRemoteService, _overview_dec =
     };
   }
   async sessions(args) {
+    await this.ready;
     return this.sessionsList(args && args.range || "all");
   }
   async models(args) {
+    await this.ready;
     return groupByModel(this._allRecords(args && args.range || "all"));
   }
   async refresh() {
+    await this.ready;
     return this.scan();
   }
   sessionsList(range = "all", now = Date.now()) {

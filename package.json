@@ -41,10 +41,5 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
   }
 }

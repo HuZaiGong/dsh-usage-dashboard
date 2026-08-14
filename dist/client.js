@@ -280,12 +280,14 @@ function UsageStatsSection(props) {
   const [range, setRange] = React.useState("all");
   const [state, setState] = React.useState({ status: "loading", data: null, error: null });
   const [refreshing, setRefreshing] = React.useState(false);
+  const seqRef = React.useRef(0);
   const load = React.useCallback(async (r) => {
+    const seq = ++seqRef.current;
     try {
       const data = await fetchOverview(r);
-      setState({ status: "ready", data, error: null });
+      if (seqRef.current === seq) setState({ status: "ready", data, error: null });
     } catch (err) {
-      setState({ status: "error", data: null, error: String(err && err.message || err) });
+      if (seqRef.current === seq) setState({ status: "error", data: null, error: String(err && err.message || err) });
     }
   }, [fetchOverview]);
   React.useEffect(() => {
@@ -296,6 +298,8 @@ function UsageStatsSection(props) {
     try {
       await refresh();
       await load(range);
+    } catch (err) {
+      setState({ status: "error", data: null, error: String(err && err.message || err) });
     } finally {
       setRefreshing(false);
     }
