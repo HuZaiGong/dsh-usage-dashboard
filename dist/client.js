@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: 'dsh-usage-dashboard',
+	id: '@huzhaigong/dsh-usage-dashboard',
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -32,7 +32,7 @@ __export(client_exports, {
   name: () => name
 });
 module.exports = __toCommonJS(client_exports);
-var name = "dsh-usage-dashboard/client";
+var name = "@huzhaigong/dsh-usage-dashboard/client";
 var inject = ["slots", "locale", "connection"];
 var NS = "settings.usageStats";
 var CSS = [
@@ -155,12 +155,12 @@ function formatTime(ms) {
   const now = /* @__PURE__ */ new Date();
   return d.toDateString() === now.toDateString() ? d.toLocaleTimeString() : d.toLocaleDateString() + " " + d.toLocaleTimeString();
 }
-var CSS_TAG = "dsh-usage-dashboard/styles";
+var CSS_TAG = "@huzhaigong/dsh-usage-dashboard/styles";
 function injectStyles() {
   if (typeof document === "undefined") return;
   if (document.querySelector("style[data-plugin-css=" + JSON.stringify(CSS_TAG) + "]")) return;
   const tag = document.createElement("style");
-  tag.dataset.plugin = "dsh-usage-dashboard";
+  tag.dataset.plugin = "@huzhaigong/dsh-usage-dashboard";
   tag.dataset.pluginCss = CSS_TAG;
   tag.textContent = CSS;
   document.head.appendChild(tag);
@@ -364,7 +364,7 @@ function UsageStatsSection(props) {
 }
 function apply(ctx) {
   injectStyles();
-  ctx.effect(() => ctx.locale.register(NS, dicts), "dsh-usage-dashboard: dictionaries");
+  ctx.effect(() => ctx.locale.register(NS, dicts), "@huzhaigong/dsh-usage-dashboard: dictionaries");
   const t = ctx.locale.bind(NS);
   const rpc = ctx.connection.rpc;
   const call = async (method, argsObj) => {

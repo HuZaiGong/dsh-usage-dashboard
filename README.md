@@ -1,4 +1,4 @@
-# dsh-usage-dashboard（雏形）
+# @huzhaigong/dsh-usage-dashboard（雏形）
 
 全 DSH 用量汇总插件：把**所有工作区 × 所有会话**的 LLM 用量聚合成看板，
 展示在 Web Settings 的"用量统计"页。

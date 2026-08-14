@@ -326,7 +326,7 @@ __decorateElement(_init, 1, "models", _models_dec, UsageStatsGateway);
 __decorateElement(_init, 1, "refresh", _refresh_dec, UsageStatsGateway);
 __decoratorMetadata(_init, UsageStatsGateway);
 __publicField(UsageStatsGateway, "inject", []);
-var name = "dsh-usage-dashboard";
+var name = "@huzhaigong/dsh-usage-dashboard";
 var inject = [];
 function apply(ctx) {
   new UsageStatsGateway(ctx);
