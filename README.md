@@ -43,7 +43,18 @@
 pnpm run link-deps   # 每次 pnpm install 之后都要重跑（install 会覆盖符号链接）
 ```
 
-## 快速开始
+## 安装方式
+
+**方式 A：npm 安装（推荐）**
+
+```bash
+pnpm add @huzaigong/dsh-usage-dashboard
+# 装到 web profile：
+dsh plugin --profile web add @huzaigong/dsh-usage-dashboard
+# 重启 dsh web 后生效
+```
+
+**方式 B：从源码（仓库开发）**
 
 ```bash
 cd plugins/dsh-usage-dashboard
