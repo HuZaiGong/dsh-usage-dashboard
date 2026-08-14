@@ -98,6 +98,14 @@ function diffChanged(files, cache = {}) {
   const removed = Object.keys(cache).filter((p) => !present.has(p));
   return { changed, next, removed };
 }
+function zstdAvailable() {
+  try {
+    execFileSync("zstd", ["--version"], { stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
 function readSessionLog(file, onLine) {
   const text = execFileSync("zstd", ["-dc", file], { maxBuffer: 512 * 1024 * 1024 }).toString("utf8");
   let n = 0;
@@ -126,7 +134,7 @@ function extractUsage(lines) {
     const ev = parseLine(line);
     if (!ev) continue;
     const d = ev.data || {};
-    const key = d.turn !== void 0 && d.step !== void 0 ? d.turn + ":" + d.step : null;
+    let key = d.turn !== void 0 && d.step !== void 0 ? d.turn + ":" + d.step : null;
     let usage = null;
     if (ev.type === "assistant/message" && d.usage) {
       usage = d.usage;
@@ -137,6 +145,11 @@ function extractUsage(lines) {
       }
     } else if (ev.type === "assistant/chunk" && d.chunk && d.chunk.type === "usage" && d.chunk.usage) {
       usage = d.chunk.usage;
+    } else if (ev.type === "compaction/summary" && d.usage) {
+      usage = d.usage;
+      if (d.provider) lastProvider = d.provider;
+      if (d.model) lastModel = d.model;
+      key = "compaction:" + (d.compactionId || ev.seq || Math.random());
     }
     if (usage && key !== null) {
       last.set(key, {
@@ -154,6 +167,19 @@ function extractUsage(lines) {
     }
   }
   return [...last.values()];
+}
+function sessionMeta(lines) {
+  for (const line of lines) {
+    const ev = parseLine(line);
+    if (ev && ev.type === "session") {
+      return {
+        delegationDepth: ev.delegationDepth ?? 0,
+        agentPreset: ev.agentPreset ?? null,
+        createdAt: ev.createdAt ?? null
+      };
+    }
+  }
+  return { delegationDepth: 0, agentPreset: null, createdAt: null };
 }
 function sumUsage(records) {
   const s = { calls: records.length, uncachedInput: 0, cacheRead: 0, cacheWrite: 0, output: 0, reasoning: 0 };
@@ -240,11 +266,28 @@ var UsageStatsGateway = class extends (_a = TypertRemoteService, _overview_dec =
     this.cache = {};
     this.sessions = /* @__PURE__ */ new Map();
     this.scannedAt = null;
+    this._eventDirty = false;
+    this._eventTimer = null;
+    ctx.effect(() => ctx.on("session/event", (store) => {
+      if (!store || !store.id) return;
+      this._eventDirty = true;
+      if (this._eventTimer !== null) return;
+      this._eventTimer = setTimeout(() => {
+        this._eventTimer = null;
+        if (!this._eventDirty) return;
+        this._eventDirty = false;
+        this.scan().catch(() => {
+        });
+      }, 800);
+    }));
     this.ready = Promise.resolve().then(() => this.scan()).catch((err) => ({ scanned: 0, changed: 0, removed: 0, ms: 0, error: String(err && err.message || err) }));
   }
   /** 扫描目录：增量重读变化文件、清理已删除会话。返回 { scanned, changed, removed, ms }。 */
   async scan() {
     const t0 = Date.now();
+    if (!zstdAvailable()) {
+      return { scanned: 0, changed: 0, removed: 0, ms: Date.now() - t0, error: "zstd CLI not found \u2014 install zstd (e.g. apt install zstd) or provide injectZstd()" };
+    }
     let files;
     try {
       files = discoverSessions(this.sessionsRoot);
@@ -261,7 +304,7 @@ var UsageStatsGateway = class extends (_a = TypertRemoteService, _overview_dec =
         continue;
       }
       const records = extractUsage(lines);
-      this.sessions.set(f.sessionId, { meta: f, records });
+      this.sessions.set(f.sessionId, { meta: { ...f, ...sessionMeta(lines) }, records });
     }
     const removedBySessionId = /* @__PURE__ */ new Set();
     for (const p of removed) {
@@ -291,6 +334,7 @@ var UsageStatsGateway = class extends (_a = TypertRemoteService, _overview_dec =
       range,
       summary: {
         sessions: this.sessionsList(range, now).length,
+        subagentSessions: this.sessionsList(range, now).filter((s) => s.delegationDepth > 0).length,
         ...summary,
         costEstimateUsd: costUsd,
         firstActivityAt: times.length ? Math.min(...times) : null,
@@ -316,6 +360,7 @@ var UsageStatsGateway = class extends (_a = TypertRemoteService, _overview_dec =
   }
   sessionsList(range = "all", now = Date.now()) {
     return [...this.sessions.entries()].map(([sessionId, { meta, records }]) => {
+      const delegationDepth = meta.delegationDepth || 0;
       const rs = range && range !== "all" ? filterByRange(records, range, now) : records;
       const s = sumUsage(rs);
       const costUsd = rs.reduce((acc, r) => acc + (estimateCost(r, r.model) || 0), 0);
@@ -323,6 +368,7 @@ var UsageStatsGateway = class extends (_a = TypertRemoteService, _overview_dec =
       return {
         sessionId,
         workspace: meta.workspace,
+        delegationDepth,
         ...s,
         costEstimateUsd: costUsd,
         lastActivityAt: times.length ? Math.max(...times) : null

@@ -102,6 +102,7 @@ var dicts = {
     tableTokens: "Tokens",
     tableCost: "Cost",
     tableActivity: "Last activity",
+    subagent: "subagent",
     loading: "Loading\u2026"
   },
   zh: {
@@ -127,6 +128,7 @@ var dicts = {
     tableTokens: "Tokens",
     tableCost: "\u82B1\u8D39",
     tableActivity: "\u6700\u540E\u6D3B\u52A8",
+    subagent: "\u5B50\u4EE3\u7406",
     loading: "\u52A0\u8F7D\u4E2D\u2026"
   }
 };
@@ -154,6 +156,24 @@ function formatTime(ms) {
   const d = new Date(ms);
   const now = /* @__PURE__ */ new Date();
   return d.toDateString() === now.toDateString() ? d.toLocaleTimeString() : d.toLocaleDateString() + " " + d.toLocaleTimeString();
+}
+function sorted(list, sort) {
+  const { key, dir } = sort;
+  return [...list].sort((a, b) => {
+    const av = a[key], bv = b[key];
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return (av < bv ? -1 : av > bv ? 1 : 0) * dir;
+  });
+}
+function SortTh({ label, sortKey, sort, onSort }) {
+  const active = sort.key === sortKey;
+  const arrow = active ? sort.dir > 0 ? " \u25B2" : " \u25BC" : "";
+  return React.createElement("th", {
+    onClick: () => onSort(sortKey),
+    style: { cursor: "pointer", userSelect: "none" },
+    title: "click to sort"
+  }, label + arrow);
 }
 var CSS_TAG = "@huzhaigong/dsh-usage-dashboard/styles";
 function injectStyles() {
@@ -210,15 +230,19 @@ function TrendChart({ buckets, t }) {
     React.createElement("div", { className: "uds-legend" }, legend)
   );
 }
-function SessionTable({ sessions, t }) {
-  const rows = sessions.slice(0, 15).map((s) => React.createElement(
+function SessionTable({ sessions, t, sort, onSort }) {
+  const rows = sorted(sessions, sort).slice(0, 15).map((s) => React.createElement(
     "tr",
     { key: s.sessionId },
     React.createElement(
       "td",
       { className: "uds-cellMain", title: s.sessionId },
       shortId(s.sessionId),
-      React.createElement("span", { className: "uds-cellSub" }, s.workspace)
+      React.createElement(
+        "span",
+        { className: "uds-cellSub" },
+        s.workspace + (s.delegationDepth > 0 ? " \xB7 " + t("subagent") : "")
+      )
     ),
     React.createElement("td", null, String(s.calls)),
     React.createElement("td", { className: "uds-num" }, formatTokens(s.total)),
@@ -234,18 +258,18 @@ function SessionTable({ sessions, t }) {
       React.createElement("thead", null, React.createElement(
         "tr",
         null,
-        React.createElement("th", null, t("tableSession")),
-        React.createElement("th", null, t("calls")),
-        React.createElement("th", null, t("tableTokens")),
-        React.createElement("th", null, t("tableCost")),
-        React.createElement("th", null, t("tableActivity"))
+        React.createElement(SortTh, { label: t("tableSession"), sortKey: "lastActivityAt", sort, onSort }),
+        React.createElement(SortTh, { label: t("calls"), sortKey: "calls", sort, onSort }),
+        React.createElement(SortTh, { label: t("tableTokens"), sortKey: "total", sort, onSort }),
+        React.createElement(SortTh, { label: t("tableCost"), sortKey: "costEstimateUsd", sort, onSort }),
+        React.createElement(SortTh, { label: t("tableActivity"), sortKey: "lastActivityAt", sort, onSort })
       )),
       React.createElement("tbody", null, rows)
     )
   );
 }
-function ModelTable({ models, t }) {
-  const rows = models.slice(0, 10).map((m) => React.createElement(
+function ModelTable({ models, t, sort, onSort }) {
+  const rows = sorted(models, sort).slice(0, 10).map((m) => React.createElement(
     "tr",
     { key: m.provider + "/" + m.model },
     React.createElement("td", { className: "uds-cellMain" }, m.model + " \xB7 " + m.provider),
@@ -263,11 +287,11 @@ function ModelTable({ models, t }) {
       React.createElement("thead", null, React.createElement(
         "tr",
         null,
-        React.createElement("th", null, t("tableModel")),
-        React.createElement("th", null, t("calls")),
-        React.createElement("th", null, t("tableTokens")),
-        React.createElement("th", null, t("hitRate")),
-        React.createElement("th", null, t("tableCost"))
+        React.createElement(SortTh, { label: t("tableModel"), sortKey: "total", sort, onSort }),
+        React.createElement(SortTh, { label: t("calls"), sortKey: "calls", sort, onSort }),
+        React.createElement(SortTh, { label: t("tableTokens"), sortKey: "total", sort, onSort }),
+        React.createElement(SortTh, { label: t("hitRate"), sortKey: "cacheHitRate", sort, onSort }),
+        React.createElement(SortTh, { label: t("tableCost"), sortKey: "costEstimateUsd", sort, onSort })
       )),
       React.createElement("tbody", null, rows)
     )
@@ -280,6 +304,9 @@ function UsageStatsSection(props) {
   const [range, setRange] = React.useState("all");
   const [state, setState] = React.useState({ status: "loading", data: null, error: null });
   const [refreshing, setRefreshing] = React.useState(false);
+  const [sortSessions, setSortSessions] = React.useState({ key: "lastActivityAt", dir: -1 });
+  const [sortModels, setSortModels] = React.useState({ key: "total", dir: -1 });
+  const makeSorter = (setter) => (key) => setter((prev) => prev.key === key ? { key, dir: -prev.dir } : { key, dir: -1 });
   const seqRef = React.useRef(0);
   const load = React.useCallback(async (r) => {
     const seq = ++seqRef.current;
@@ -360,9 +387,9 @@ function UsageStatsSection(props) {
       ),
       React.createElement(TrendChart, { buckets: state.data.buckets, t }),
       React.createElement("h4", { className: "uds-sectionTitle" }, t("tableSession")),
-      React.createElement(SessionTable, { sessions: state.data.sessions, t }),
+      React.createElement(SessionTable, { sessions: state.data.sessions, t, sort: sortSessions, onSort: makeSorter(setSortSessions) }),
       React.createElement("h4", { className: "uds-sectionTitle" }, t("tableModel")),
-      React.createElement(ModelTable, { models: state.data.models, t })
+      React.createElement(ModelTable, { models: state.data.models, t, sort: sortModels, onSort: makeSorter(setSortModels) })
     )
   );
 }

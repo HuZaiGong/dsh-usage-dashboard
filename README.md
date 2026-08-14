@@ -9,7 +9,9 @@
 
 - 全局汇总卡片：总 tokens（输入/输出细分）、估算花费、请求数、会话数、缓存命中率
 - 按天堆叠趋势图（未缓存输入 / 缓存读 / 缓存写 / 输出）
-- 排行表：按会话（含工作区）、按模型（provider/model）
+- 排行表：按会话（含工作区）、按模型（provider/model），**表头点击排序**（会话/请求数/tokens/花费/活动时间）
+- 子代理会话自动标记（delegationDepth>0）；上下文压缩（compaction）用量纳入统计
+- 增量实时：监听会话事件，有活动时自动重扫（无需手动刷新）
 - 时间范围切换：全部 / 近 7 天 / 近 30 天；手动刷新（增量重扫）
 - 命中率口径与官方 stats strip 一致：cacheRead / (uncached + cacheRead + cacheWrite)
 - 风格使用 DSH 设计令牌（--dsw-alias-* / --ds-font-family-code），styles.insert() 注入
@@ -74,5 +76,10 @@ import("./lib/scan.js").then(async (scan) => {
 - [x] M0 聚合核心（scan + aggregate + pricing）
 - [x] M1 Host remote 服务 + range 过滤 + 会话清理（已冒烟验证）
 - [x] M2 Settings 页面（DSH 风格可视化看板，已构建验证）
-- [ ] M3 增量事件钩子 / 排序筛选 / 成本表完善（models.dev）
+- [x] v0.2 增量事件钩子（订阅 session/event，节流合并重扫）
+- [x] v0.2 排序筛选（会话/模型表头点击排序）
+- [x] v0.2 compaction/summary 压缩用量纳入统计
+- [x] v0.2 子代理会话识别（delegationDepth 标记）
+- [x] v0.2 zstd 缺失探测与友好报错
+- [ ] M3 成本表完善（models.dev 动态价格）
 - [x] 安装进 web profile 实测（Host RPC + Settings 看板均已在运行实例验证）
