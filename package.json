@@ -12,7 +12,8 @@
   "files": [
     "dist",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "scripts/link-deps.sh"
   ],
   "dsh": {
     "bundle": {

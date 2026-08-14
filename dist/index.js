@@ -206,7 +206,7 @@ function cutoffFor(range, now = Date.now()) {
 function filterByRange(records, range, now = Date.now()) {
   const cutoff = cutoffFor(range, now);
   if (cutoff === null) return records;
-  return records.filter((r) => r.atMs !== null && r.atMs >= cutoff);
+  return records.filter((r) => r.atMs != null && r.atMs >= cutoff);
 }
 
 // lib/pricing.js
@@ -257,6 +257,7 @@ var UsageStatsGateway = class extends (_a = TypertRemoteService, _overview_dec =
       try {
         readSessionLog(f.path, (line) => lines.push(line));
       } catch {
+        delete next[f.path];
         continue;
       }
       const records = extractUsage(lines);
