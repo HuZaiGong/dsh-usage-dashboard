@@ -1,4 +1,4 @@
-# @huzaigong/dsh-usage-dashboard（雏形）
+# @huzaigong/dsh-usage-dashboard
 
 ![build](https://github.com/HuZaiGong/dsh-usage-dashboard/actions/workflows/build.yml/badge.svg) ![license](https://img.shields.io/badge/license-MIT-blue.svg) ![dsh](https://img.shields.io/badge/dsh-0.1.0--rc.6-blueviolet)
 
@@ -8,7 +8,7 @@
 ## 功能
 
 - 全局汇总卡片：总 tokens（输入/输出细分）、估算花费、请求数、会话数、缓存命中率
-- 按天堆叠趋势图（未缓存输入 / 缓存读 / 缓存写 / 输出）
+- 按天堆叠趋势图（未缓存输入 / 缓存读 / 缓存写 / 输出）；**悬停柱子显示该时间段用量细分浮窗**（24h 与 30d 均支持）
 - 排行表：按会话（含工作区）、按模型（provider/model），**表头点击排序** + **一键展开全部**（默认截断 15/10 行）
 - 时间范围切换：全部 / 近 7 天 / 近 30 天（柱状图按天）；**近 24 小时按小时桶**
 - 子代理会话自动标记（delegationDepth>0）；上下文压缩（compaction）用量纳入统计
@@ -21,7 +21,7 @@
 
 ## 社区
 
-- [贡献指南](./CONTRIBUTING.md) · [行为准则](./CODE_OF_CONDUCT.md) · [安全策略](./SECURITY.md)
+- [贡献指南](./CONTRIBUTING.md) · [行为准则](./CODE_OF_CONDUCT.md) · [安全策略](./SECURITY.md) · [AGENTS.md](./AGENTS.md)（AI 代理项目指导）
 - [提交 Issue](https://github.com/HuZaiGong/dsh-usage-dashboard/issues/new/choose)（Bug / 功能建议有模板）
 
 ## 结构
@@ -31,6 +31,10 @@
 - `lib/pricing.js` — 价格表驱动成本估算（内置 + models.dev + 配置文件覆盖）
 - `lib/index.js` — Host：`usageStats` remote 服务（TypertRemoteService）
 - `lib/client.js` — Browser：Settings 用量统计页（DSH 风格可视化看板）
+- `scripts/build.mjs` — esbuild 构建（host + client 双 bundle）
+- `scripts/link-deps.sh` — 重建 dsh 安装树符号链接（`pnpm run link-deps`）
+- `scripts/smoke-test.mjs` — 聚合核心冒烟测试（CI 同款）
+- `scripts/gh-push.mjs` — 双通道推送（直连 git push / gh api Git Data API 回退）
 
 ## 依赖链接（重要）
 
@@ -67,6 +71,14 @@ dsh --profile web --dump-config   # 验证装配层
 
 ## CLI 自测（不经 dsh，直接验证聚合核心）
 
+推荐直接跑冒烟测试：
+
+```bash
+node scripts/smoke-test.mjs
+```
+
+也可用下面这段直接读真实会话验证聚合（需系统 `zstd` CLI；缺失时插件会自动用纯 JS 解码，但本命令仍走 CLI）：
+
 ```bash
 node -e '
 import("./lib/scan.js").then(async (scan) => {
@@ -95,4 +107,7 @@ import("./lib/scan.js").then(async (scan) => {
 - [x] v0.2 zstd 缺失探测与友好报错
 - [x] 成本价格表：内置 DeepSeek 常量 + models.dev 动态拉取（超时静默回退）+ `$DSH_HOME/usage-prices.json` 配置覆盖；未计价模型在 UI 提示
 - [x] zstd 解码回退：系统 zstd 缺失时自动改用纯 JS（fzstd）解码（完整流与 CLI 一致）
+- [x] 0.1.2 图表 hover 浮窗（24h/30d 柱上悬停看细分用量）
+- [x] 0.1.3 安全修复（esbuild 升级 GHSA-67mh-4wv8-2f99、依赖版本锁定、fzstd 解码大小守卫）
+- [x] 已发布 npm（0.1.x，组织 @huzaigong 归属）；GitHub Actions 自动构建 + 发布
 - [x] 安装进 web profile 实测（Host RPC + Settings 看板均已在运行实例验证）
