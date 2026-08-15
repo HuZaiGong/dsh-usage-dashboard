@@ -45,7 +45,20 @@ const direct = run('git', ['push', 'origin', 'HEAD:main'], { timeout: 20000 })
 if (direct.ok) { console.log('pushed via git:', direct.out.split('\n').pop()); process.exit(0) }
 console.log('direct push unavailable, falling back to gh api:', direct.out.slice(0, 120))
 
-// 4) gh api Git Data API 推送（api.github.com 可达即可）
+// 4) 变更文件集合：本地领先 commit 的 diff（覆盖已提交未推送的 commit；工作区改动已在上一步提交）
+const baseExists = run('git', ['rev-parse', '--verify', 'origin/main']).ok
+let diffFiles = []
+if (baseExists) {
+  const diff = run('git', ['diff', '--name-status', 'origin/main..HEAD']).out
+  diffFiles = diff.split('\\n').filter(Boolean).map((l) => l.split(/\t/).slice(-1)[0])
+}
+if (diffFiles.length === 0) {
+  console.error('no file changes to push (diff origin/main..HEAD empty)')
+  process.exit(1)
+}
+console.log('pushing', diffFiles.length, 'files via gh api')
+
+// 5) gh api Git Data API 推送（api.github.com 可达即可）
 const hostsFile = process.env.HOME + '/.config/gh/hosts.yml'
 if (!existsSync(hostsFile)) { console.error('gh not authenticated'); process.exit(1) }
 const tok = readFileSync(hostsFile, 'utf8').match(/oauth_token:\s*(\S+)/)?.[1]
