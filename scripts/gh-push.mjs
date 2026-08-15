@@ -70,11 +70,11 @@ const api = async (method, path, body) => {
   return res.json()
 }
 
-const files = status ? status.split('\n').map((l) => l.slice(3)) : [] // A/M/D 列后
+const files = diffFiles // 来自 diff origin/main..HEAD（覆盖已提交未推送的 commit）
 const modeOf = (path) => {
   const ls = run('git', ['ls-files', '-s', path]).out
   const mm = ls.match(/^1\d{5}/)
-  return mm ? (Number(mm[0]) & 0o111 ? '100755' : '100644') : '100644'
+  return mm ? (parseInt(mm[0], 8) & 0o111 ? '100755' : '100644') : '100644'
 }
 const baseRef = await api('GET', '/repos/' + REPO + '/git/ref/heads/main')
 const baseCommit = await api('GET', '/repos/' + REPO + '/git/commits/' + baseRef.object.sha)
