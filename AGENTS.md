@@ -39,8 +39,10 @@ lib/client.js                  lib/index.js: UsageStatsGateway extends TypertRem
    0.1.0-rc.6 写在模块私有 WeakMap，0.2.0-rc.2 起写在类原型的公开字符串描述符上；
    装成本地副本会让 gateway 发现 **0 个方法**、RPC 404，且无报错日志。
    dsh 的 profile 解析会为**声明为 peer 的名字**提供运行时实例，因此**不需要符号链接**；
-   仓库的 `autoInstallPeers: false` 保证 `pnpm install` 不拉本地副本。
+   `autoInstallPeers: false` 由 dsh 自己写进 profile 的 `pnpm-workspace.yaml`。
    `scripts/link-deps.sh` 已降级为「直连 `lib/index.js` 调试」的可选工具。
+   **同时必须声明运行时下限 `@deepseek-ai/dsh: >=0.1.7-rc.2 <0.3.0`**（见 §11 版本矩阵）：
+   上述 peer 解析机制与版本门控都是 0.1.7-rc.2 才引入的。
 
 2. **@Remote 方法签名（SRC 校验）**：参数必须是唯一标识符——
    **不能有默认值、解构、rest**（写 `overview(args)`，不要写 `overview(args = {})`）。
@@ -176,3 +178,36 @@ git tag v0.1.x && node scripts/gh-push.mjs   # 打 tag（直连不通时用 gh a
 | CI setup-node 崩（ERR_UNKNOWN_BUILTIN_MODULE） | Node 20 + pnpm 11 | workflow 用 Node 24 |
 | npm publish 403/404 | 2FA 未绕过 / scope 拼写 | Automation token / 检查 `huzaigong` 拼写 |
 | 数据里未计价的模型 | 内置表无该模型 + models.dev 不可达 | 加 `$DSH_HOME/usage-prices.json` 覆盖 |
+| 插件加载失败 `Cannot find module '@deepseek-ai/dsh-typert-protocol'` | dsh 低于 0.1.7-rc.2（无 peer 感知解析） | 升级 dsh，或对该旧版用 `scripts/link-deps.sh` 建符号链接 |
+
+## 11. dsh 版本矩阵（务必保持）
+
+DSH 的插件 API 处于 rc 阶段，跨版本有破坏性变化。本插件依赖**两项同在
+`0.1.7-rc.2` 引入**的机制：profile 插件解析会为声明为 peer 的名字提供运行时实例；
+以及启动时对 `@deepseek-ai/dsh*` peer 的版本门控。核对方式：从 npm 拉各版本
+`@deepseek-ai/dsh-app-boot`，在 `lib/*.js` 里查 `createRuntimeResolution` /
+`installRuntimeInterception` / `routeScoped`（解析）与
+`is incompatible with dsh` / `evaluatePluginCompatibility`（门控）。
+
+| dsh 版本 | peer 感知解析 | 版本门控 | 结论 |
+|---|---|---|---|
+| 0.0.1-rc.5 | ✗ | ✗ | 不支持 |
+| 0.1.0-rc.6（本插件最初的开发目标） | ✗ | ✗ | 不支持 |
+| 0.1.5-rc.3 | ✗ | ✗ | 不支持 |
+| 0.1.6-alpha.2 | 部分 | ✗ | 未验证 |
+| **0.1.7-rc.2** | ✓ | ✓ | 支持下限 |
+| 0.2.0-rc.2 | ✓ | ✓ | ✅ 已端到端验证（Windows 打包版） |
+| 0.2.1-alpha.1 | ✓ | ✓ | 机制在，未端到端验证 |
+
+补充事实：
+
+- 各版本（含 0.1.0-rc.6）的 profile 模板都写死 `autoInstallPeers: false`
+  （`dsh-app-boot` 里的 `PROFILE_PNPM_WORKSPACE`）——所以 peer **不会**被 pnpm 自动装成
+  本地副本，这是 peer 方案成立的前提。
+- 门控拒绝时可操作信息长这样，含 `allow-version` 命令：
+  `Plugin <name>@<ver> is incompatible with dsh <runtime>: peerDependencies {...}`。
+- `dsh.client.inject` 只被 `optionalStringArray` 解析、**不校验包是否存在**；
+  `@deepseek-ai/dsh-client-runtime` 在本仓库里出现过但**任何 dsh 版本都没有这个包**
+  （对应物是 `dsh-cordis-client-runner`），已在 0.1.6 移除。
+- 会话日志解析只验证过 format v4。升 dsh 后**必须**重新跑
+  `verify` 步骤：真实加载器 `--dump-config-schema` + 用真实会话跑一次聚合。

@@ -1,6 +1,6 @@
 # @huzaigong/dsh-usage-dashboard
 
-![build](https://github.com/HuZaiGong/dsh-usage-dashboard/actions/workflows/build.yml/badge.svg) ![license](https://img.shields.io/badge/license-MIT-blue.svg) ![dsh](https://img.shields.io/badge/dsh-0.1.0--rc.6%20%7C%200.2.0--rc.2-blueviolet)
+![build](https://github.com/HuZaiGong/dsh-usage-dashboard/actions/workflows/build.yml/badge.svg) ![license](https://img.shields.io/badge/license-MIT-blue.svg) ![dsh](https://img.shields.io/badge/dsh-%3E%3D0.1.7--rc.2%20%3C0.3.0-blueviolet)
 
 全 DSH 用量汇总插件：把**所有工作区 × 所有会话**的 LLM 用量聚合成看板，
 展示在 Web Settings 的"用量统计"页。
@@ -43,25 +43,50 @@
 装饰器写入的那一份（0.1.0-rc.6 写在模块私有的 WeakMap 里；0.2.0-rc.2 起写在类原型上的
 公开字符串描述符上）。副本会导致网关发现 **0 个方法**、RPC 404，且**没有任何报错日志**。
 
-因此本包把它声明为 **peerDependency**，而不是普通依赖：
+因此本包把它声明为 **peerDependency**，而不是普通依赖（同时声明 dsh 运行时下限，
+见下节）：
 
 ```json
-"peerDependencies": { "@deepseek-ai/dsh-typert-protocol": ">=0.1.0-rc.6 <0.3.0" }
+"peerDependencies": {
+  "@deepseek-ai/dsh": ">=0.1.7-rc.2 <0.3.0",
+  "@deepseek-ai/dsh-typert-protocol": ">=0.1.0-rc.6 <0.3.0"
+}
 ```
 
 dsh 的 profile 模块解析会为**声明为 peer 的名字**提供运行时的那个实例，所以：
 
 - 不需要符号链接、不需要 `link-deps`；`pnpm install` 也没有东西可覆盖
-- 版本区间同时覆盖 0.1.0-rc.6 与 0.2.0-rc.2；dsh 的启动兼容性检查只校验
-  `@deepseek-ai/dsh*` 的 peer 区间，两者都能通过
 - 本地开发由 `pnpm-workspace.yaml` 的 `autoInstallPeers: false` 保证不会拉一个会遮蔽
-  运行时的本地副本
+  运行时的本地副本 —— dsh 初始化 profile 时自己就会写入这个设置
 
 > **历史与打包版差异**：0.1.4 及更早把该包放在 `dependencies`，并用
 > `scripts/link-deps.sh` 建符号链接指向 dsh 安装树。该做法在**打包桌面版不可用**——
 > dsh 树位于 `app.asar` 内，符号链接目标无法穿越 asar。peer 声明是 dsh 的官方机制，
-> 源码树与打包版两种形态都适用。`scripts/link-deps.sh` 仅保留给直接用 Node 加载
-> `lib/index.js` 的调试场景。
+> 源码树与打包版两种形态都适用。
+
+## 兼容性（重要）
+
+dsh 的插件 API 仍在 rc 阶段，跨版本存在破坏性变化。本插件依赖**两项自
+`dsh 0.1.7-rc.2` 才引入**的机制：
+
+1. profile 插件解析：为声明为 peer 的名字提供运行时实例
+2. 启动时的 `peerDependencies` 版本门控（校验 `@deepseek-ai/dsh*`）
+
+因此本包声明了明确的运行时区间：
+
+| dsh 版本 | 状态 |
+|---|---|
+| `>= 0.1.7-rc.2`，`< 0.3.0` | ✅ 支持 —— `0.2.0-rc.2`（Windows 打包桌面版）已端到端验证 |
+| `0.1.6-alpha.x` | ⚠️ 机制不完整，未验证 |
+| `<= 0.1.5-rc.3` | ❌ 无运行时解析机制，peer 无法解析 → 加载失败。旧版请用 `scripts/link-deps.sh` 建立指向 dsh 安装树的符号链接 |
+| `>= 0.3.0` | ⛔ 默认拒绝（区间上界）。确需使用时按 dsh 提示执行 `dsh plugin allow-version ... --accept-risk` 显式豁免 |
+
+被门控拒绝时 dsh 会打印**可操作**的信息（包名、版本、运行时版本、`allow-version`
+命令），而不是静默失败。
+
+会话日志解析目前只验证过 **session format v4**（`session.v4.jsonl.zstd`，dsh 0.2.0-rc.2）。
+`scan.js` 的文件名正则会同时接受 `session.jsonl.zstd` 与 `session.<tag>.jsonl.zstd`，
+但更早的 v0–v3 事件结构是否同样带 `assistant/message` + `data.usage` **未验证**。
 
 ## 安装方式
 
@@ -132,3 +157,6 @@ import("./lib/scan.js").then(async (scan) => {
 - [x] 0.1.5 兼容 dsh 0.2.0-rc.2 会话格式 v4：日志名为 `session.v4.jsonl.zstd`（原来只认
       `session.jsonl.zstd`，导致扫不到会话、看板空白且不报错）；同时修复 Windows 下
       `sessionId` 取值错误与 `build.mjs` 的 `URL.pathname` 构建失败
+- [x] 0.1.6 声明运行时区间 `@deepseek-ai/dsh: >=0.1.7-rc.2 <0.3.0`：把「profile peer 解析 +
+      版本门控」这两项机制的存在范围变成显式契约，不支持的版本由 dsh 给出可操作提示；
+      清掉 `dsh.client.inject` 中自 0.1.0 起就不存在、也从未存在的 `dsh-client-runtime`
