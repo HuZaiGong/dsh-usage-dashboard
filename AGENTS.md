@@ -19,7 +19,7 @@ LLM token 用量/花费聚合成一个看板，展示在 Web Settings 的「用�
 Browser (client)                          Host (node, 组合层)
 Settings 用量统计页  ──RPC──▶  /api/usageStats/{overview,sessions,models,refresh}
 lib/client.js                  lib/index.js: UsageStatsGateway extends TypertRemoteService
-  ctx.connection.rpc.call          ├─ lib/scan.js      扫描 $DSH_HOME/sessions/**/session.jsonl.zstd
+  ctx.connection.rpc.call          ├─ lib/scan.js      扫描 $DSH_HOME/sessions/**/session[.<tag>].jsonl.zstd
   ('/api','usageStats/x')          ├─ lib/aggregate.js 解析+去重+维度聚合
                                    ├─ lib/pricing.js   价格表/成本估算
                                    └─ 内存 Store + mtime/size 增量缓存
@@ -98,6 +98,13 @@ cordis.patch.yml    # 组合层插行（name 必须是当前包名 @huzaigong/ds
 ## 7. 数据语义（务必保持）
 
 - **去重**：同一 `(turn, step)` 后者覆盖前者（`assistant/message` 覆盖 `assistant/chunk{type:usage}`）。
+- **会话文件名**：dsh 0.2.0-rc.2（session format v4）写 `session.v4.jsonl.zstd`，更早版本写
+  `session.jsonl.zstd`；`scan.js` 用 `SESSION_FILE_RE` 同时接受两者与将来的标签形式。
+  只认旧名字会让 `discoverSessions` 返回 0 个文件、看板空白**且不报错**。
+- **Windows 路径**：`sessionId` 必须用 `path.basename(dir)`，不要用
+  `dir.slice(dir.lastIndexOf('/') + 1)`（反斜杠下永远匹配不到，会得到整条路径）；
+  `build.mjs` 里给 esbuild 的路径要用 `fileURLToPath`，`URL.pathname` 在 Windows 上是
+  `/C:/...`，无法解析。
 - **compaction/summary**：`data.usage` 顶层字段携带压缩消耗（无 turn/step），
   以 `compactionId` 去重后计入——**必须统计**（实测单次可达 77k input tokens）。
 - **子代理**：`session` 事件的 `delegationDepth > 0` 标记子代理会话（UI 显示「子代理」徽标，
@@ -131,7 +138,7 @@ git tag v0.1.x && node scripts/gh-push.mjs   # 打 tag（直连不通时用 gh a
 - dsh 安装：`/usr/local/lib/node_modules/@deepseek-ai/dsh/`
 - dsh web：`http://127.0.0.1:3080`（重启保持 URL；重启脚本 `/tmp/restart-dsh.sh` 延迟 4-5s）
 - 日志：`/tmp/dsh-web.log`；重启记录：`/tmp/dsh-web-restart.log`
-- 会话数据：`$DSH_HOME/sessions/<workspace>/<sessionId>/session.jsonl.zstd`（zstd 压缩 JSONL）
+- 会话数据：`$DSH_HOME/sessions/<workspace>/<sessionId>/session[.<tag>].jsonl.zstd`（zstd 压缩 JSONL；0.2.0-rc.2 为 `session.v4.jsonl.zstd`）
 - web profile：`/root/.dsh/profiles/web/`（依赖键是 `@huzaigong/dsh-usage-dashboard: link:/root/DSH/plugins/dsh-usage-dashboard`）
 - 宿主 RPC 探针（验证用）：
   ```bash
