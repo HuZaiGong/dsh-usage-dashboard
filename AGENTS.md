@@ -33,26 +33,31 @@ lib/client.js                  lib/index.js: UsageStatsGateway extends TypertRem
 
 ## 3. ⚠️ 最关键的三条警告（违反会导致静默故障）
 
-1. **符号链接（模块实例一致性）**：
-   `node_modules/@deepseek-ai/{cordis,dsh-typert-protocol}` 必须是指向 **dsh 安装树**
-   （`/usr/local/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/`）的符号链接，
-   不能是 pnpm 本地副本。@Remote 发现的私有 marker WeakMap 与 cordis Service 符号
-   **按模块实例隔离**——副本会导致网关发现 0 个方法、RPC 404，且无报错日志。
-   **每次 `pnpm install` / `pnpm add` / profile install 之后必须重跑 `pnpm run link-deps`**。
+1. **模块实例一致性（peerDependency）**：
+   `@deepseek-ai/dsh-typert-protocol` **必须是 `peerDependencies`**（当前区间
+   `>=0.1.0-rc.6 <0.3.0`），不能放 `dependencies`。@Remote 的 marker 按模块实例隔离：
+   0.1.0-rc.6 写在模块私有 WeakMap，0.2.0-rc.2 起写在类原型的公开字符串描述符上；
+   装成本地副本会让 gateway 发现 **0 个方法**、RPC 404，且无报错日志。
+   dsh 的 profile 解析会为**声明为 peer 的名字**提供运行时实例，因此**不需要符号链接**；
+   仓库的 `autoInstallPeers: false` 保证 `pnpm install` 不拉本地副本。
+   `scripts/link-deps.sh` 已降级为「直连 `lib/index.js` 调试」的可选工具。
 
 2. **@Remote 方法签名（SRC 校验）**：参数必须是唯一标识符——
    **不能有默认值、解构、rest**（写 `overview(args)`，不要写 `overview(args = {})`）。
    默认值只允许出现在非 remote 方法（如 `sessionsList(range='all')`）。
 
-3. **验证 remoteMethods 要从 dsh 树导入 typert-protocol**：
-   `import {remoteMethods} from '/usr/local/lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-typert-protocol/lib/index.js'`
-   从 profile 的副本导入会得到假阴性（[]）。实例化需要完整 ctx 桩（含 `reflect.provide`）。
+3. **验证 remoteMethods 要从 dsh 安装树导入 typert-protocol**：
+   源码树 `.../node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/dsh-typert-protocol/lib/index.js`；
+   打包桌面版用 `file:///D:/DSH/resources/app.asar/dsh/node_modules/@deepseek-ai/dsh-typert-protocol/lib/index.js`
+   （Electron 可用 `file://` 导入 asar 内模块）。从 profile 的副本导入会得到假阴性（[]）。
+   另外 **0.2.0-rc.2 的 marker 由装饰器 initializer 在实例构造时写到原型上**，
+   所以必须 `new` 一个真实实例（`new cordis.Context()` 即可）；
+   用 `Object.create(proto)` 探测同样是假阴性。
 
 ## 4. 构建与测试
 
 ```bash
-pnpm install           # 之后必须：pnpm run link-deps
-pnpm run link-deps     # 重建指向 dsh 安装树的符号链接（关键！）
+pnpm install           # 只装 esbuild 等构建依赖（peer 由 dsh 运行时提供）
 pnpm build             # esbuild → dist/index.js + dist/client.js
 node scripts/smoke-test.mjs   # 聚合核心冒烟测试（CI 同款）
 ```
@@ -71,7 +76,7 @@ lib/aggregate.js    # parseLine / extractUsage / sumUsage / bucketByDay / bucket
 lib/pricing.js      # DEFAULT_PRICES / lookupPrice / mergePrices / loadConfigPrices / normalizeModelsDevTable / fetchModelsDev
 lib/client.js       # Browser：Settings「用量统计」看板（纯 React.createElement）
 scripts/build.mjs   # esbuild 双 bundle（client 用 __ModuleLoader__.load 包装，id = 包名）
-scripts/link-deps.sh# 重建符号链接（README「依赖链接」）
+scripts/link-deps.sh# 可选：直连 lib/index.js 调试时的依赖链接
 scripts/smoke-test.mjs  # 冒烟测试
 scripts/gh-push.mjs     # 双通道 push（直连 git push / gh api Git Data API 回退）
 cordis.patch.yml    # 组合层插行（name 必须是当前包名 @huzaigong/dsh-usage-dashboard）
@@ -136,11 +141,30 @@ git tag v0.1.x && node scripts/gh-push.mjs   # 打 tag（直连不通时用 gh a
 - 客户端 bundle 每请求读盘（no-cache）——**client 改动只需浏览器强刷，无需重启**；
   host（lib/index.js）改动需重启 dsh web。
 
+### 打包桌面版（Windows / app.asar）
+
+- dsh 树在 asar 内：`D:\DSH\resources\app.asar\dsh\`；host 进程：
+  `"D:\DSH\DeepSeek Harness.exe" --expose-internals D:\DSH\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\index.js`
+- profile：`%USERPROFILE%\.dsh\profiles\desktop\`（bundles 在 `package.json` 的
+  `dsh.profile.bundles`；`pnpm-workspace.yaml` 含 `autoInstallPeers: false`）
+- **符号链接在这里行不通**：NTFS 在内核解析链接目标，而 `app.asar` 是普通文件，
+  无法穿越；`link-deps.sh` 依赖的 `command -v dsh` 在桌面版也不存在。
+  peer 声明 + 运行时的 peer 感知解析才是正解。
+- **真实加载器验证**（会实际导入每个组合模块，不需要重启 GUI）：
+  ```powershell
+  & "D:\DSH\DeepSeek Harness.exe" --expose-internals `
+    "D:\DSH\resources\app.asar\dsh\node_modules\@deepseek-ai\dsh-desktop-host\lib\cli.js" `
+    --profile <测试profile> --dump-config-schema
+  ```
+  `desktop` profile 被 Electron 独占，CLI 会拒绝（"managed exclusively by the Electron
+  application"）——请复制一份 profile 做验证。插件对应条目无 error 即表示模块导入成功。
+- 桌面版重启：**杀掉 `DeepSeek Harness.exe` 后重新启动**；不重启则新 bundle 不会装载。
+
 ## 10. 常见故障速查
 
 | 症状 | 原因 | 处理 |
 |---|---|---|
-| RPC 404 "not found"、remoteMethods=[] | 符号链接被 pnpm install 覆盖 | `pnpm run link-deps` + 重启 |
+| RPC 404 "not found"、remoteMethods=[] | typert-protocol 被装成了本地副本（它必须是 peerDependency） | 确认 `peerDependencies` + `autoInstallPeers: false`；删掉 profile 里的本地副本后重启 |
 | SRC method ... must use unique identifier parameters | @Remote 方法带默认参数 | 去掉默认值/解构 |
 | CI setup-node 崩（ERR_UNKNOWN_BUILTIN_MODULE） | Node 20 + pnpm 11 | workflow 用 Node 24 |
 | npm publish 403/404 | 2FA 未绕过 / scope 拼写 | Automation token / 检查 `huzaigong` 拼写 |
