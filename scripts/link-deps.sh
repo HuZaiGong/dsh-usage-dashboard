@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
-# Recreate the two critical module symlinks required for @Remote discovery.
+# OPTIONAL — link @deepseek-ai/dsh-typert-protocol (and cordis) from the running
+# dsh installation tree into this checkout's node_modules.
 #
-# Why: the host-side api-gateway resolves remote methods through a private
-# marker WeakMap owned by the *dsh installation's* copy of
-# @deepseek-ai/dsh-typert-protocol, and cordis Service symbols must also come
-# from the same cordis instance. A plain `pnpm install` in this directory
-# replaces these symlinks with local pnpm copies, which breaks host-side
-# discovery (the gateway sees zero methods). Re-run this script after every
-# `pnpm install` (or `pnpm run link-deps`).
+# The plugin no longer needs this to work: @deepseek-ai/dsh-typert-protocol is a
+# peerDependency, and dsh's profile resolution supplies the running installation's
+# own module instance for every bare name declared as a peer. A plain
+# `pnpm install` therefore installs no local copy that could shadow it (the repo
+# sets autoInstallPeers: false).
+#
+# Keep using this script only when you load lib/index.js with plain Node outside
+# dsh (debugging), where the dsh resolver is not in play.
+#
+# Note: this cannot work on the packaged desktop build — its dsh tree lives inside
+# app.asar, and a symlink target inside an asar cannot be traversed by the OS.
 #
 # It locates the dsh package root via `command -v dsh`; override with
 # DSH_TREE=<path-to-dsh-package-root> if dsh is not on PATH.

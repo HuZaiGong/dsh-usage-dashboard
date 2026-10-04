@@ -1,6 +1,6 @@
 # @huzaigong/dsh-usage-dashboard
 
-![build](https://github.com/HuZaiGong/dsh-usage-dashboard/actions/workflows/build.yml/badge.svg) ![license](https://img.shields.io/badge/license-MIT-blue.svg) ![dsh](https://img.shields.io/badge/dsh-0.1.0--rc.6-blueviolet)
+![build](https://github.com/HuZaiGong/dsh-usage-dashboard/actions/workflows/build.yml/badge.svg) ![license](https://img.shields.io/badge/license-MIT-blue.svg) ![dsh](https://img.shields.io/badge/dsh-0.1.0--rc.6%20%7C%200.2.0--rc.2-blueviolet)
 
 全 DSH 用量汇总插件：把**所有工作区 × 所有会话**的 LLM 用量聚合成看板，
 展示在 Web Settings 的"用量统计"页。
@@ -32,20 +32,36 @@
 - `lib/index.js` — Host：`usageStats` remote 服务（TypertRemoteService）
 - `lib/client.js` — Browser：Settings 用量统计页（DSH 风格可视化看板）
 - `scripts/build.mjs` — esbuild 构建（host + client 双 bundle）
-- `scripts/link-deps.sh` — 重建 dsh 安装树符号链接（`pnpm run link-deps`）
+- `scripts/link-deps.sh` — 直连 `lib/index.js` 调试时的依赖链接（可选；正常安装不需要）
 - `scripts/smoke-test.mjs` — 聚合核心冒烟测试（CI 同款）
 - `scripts/gh-push.mjs` — 双通道推送（直连 git push / gh api Git Data API 回退）
 
-## 依赖链接（重要）
+## 模块实例一致性（重要）
 
-宿主侧的 @Remote 发现依赖**同一个** `@deepseek-ai/dsh-typert-protocol` 与 `cordis`
-模块实例（私有 marker WeakMap / Service 符号按实例隔离）。因此本目录下
-`node_modules/@deepseek-ai/{cordis,dsh-typert-protocol}` 必须是指向**正在运行的 dsh
-安装树**的符号链接，而不能是 pnpm 本地副本：
+宿主侧的 @Remote 发现要求插件与 dsh 的 api-gateway 使用**同一个**
+`@deepseek-ai/dsh-typert-protocol` 模块实例：gateway 读取的 Remote 标记，必须正是插件
+装饰器写入的那一份（0.1.0-rc.6 写在模块私有的 WeakMap 里；0.2.0-rc.2 起写在类原型上的
+公开字符串描述符上）。副本会导致网关发现 **0 个方法**、RPC 404，且**没有任何报错日志**。
 
-```bash
-pnpm run link-deps   # 每次 pnpm install 之后都要重跑（install 会覆盖符号链接）
+因此本包把它声明为 **peerDependency**，而不是普通依赖：
+
+```json
+"peerDependencies": { "@deepseek-ai/dsh-typert-protocol": ">=0.1.0-rc.6 <0.3.0" }
 ```
+
+dsh 的 profile 模块解析会为**声明为 peer 的名字**提供运行时的那个实例，所以：
+
+- 不需要符号链接、不需要 `link-deps`；`pnpm install` 也没有东西可覆盖
+- 版本区间同时覆盖 0.1.0-rc.6 与 0.2.0-rc.2；dsh 的启动兼容性检查只校验
+  `@deepseek-ai/dsh*` 的 peer 区间，两者都能通过
+- 本地开发由 `pnpm-workspace.yaml` 的 `autoInstallPeers: false` 保证不会拉一个会遮蔽
+  运行时的本地副本
+
+> **历史与打包版差异**：0.1.4 及更早把该包放在 `dependencies`，并用
+> `scripts/link-deps.sh` 建符号链接指向 dsh 安装树。该做法在**打包桌面版不可用**——
+> dsh 树位于 `app.asar` 内，符号链接目标无法穿越 asar。peer 声明是 dsh 的官方机制，
+> 源码树与打包版两种形态都适用。`scripts/link-deps.sh` 仅保留给直接用 Node 加载
+> `lib/index.js` 的调试场景。
 
 ## 安装方式
 
@@ -111,3 +127,5 @@ import("./lib/scan.js").then(async (scan) => {
 - [x] 0.1.3 安全修复（esbuild 升级 GHSA-67mh-4wv8-2f99、依赖版本锁定、fzstd 解码大小守卫）
 - [x] 已发布 npm（0.1.x，组织 @huzaigong 归属）；GitHub Actions 自动构建 + 发布
 - [x] 安装进 web profile 实测（Host RPC + Settings 看板均已在运行实例验证）
+- [x] 兼容 dsh 0.2.0-rc.2：`@deepseek-ai/dsh-typert-protocol` 改为 peerDependency，
+      移除对符号链接（`link-deps`）的依赖，打包桌面版（dsh 树在 `app.asar` 内）同样适用

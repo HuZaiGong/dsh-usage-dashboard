@@ -3,6 +3,9 @@ allowBuilds:
   esbuild: true
 onlyBuiltDependencies:
   - esbuild
+# @deepseek-ai/dsh-typert-protocol 是 peerDependency：由正在运行的 dsh 安装树提供，
+# 本地不安装副本。副本会遮蔽运行时的那个模块实例，导致 @Remote 发现 0 个方法。
+autoInstallPeers: false
 minimumReleaseAgeExclude:
   - '@deepseek-ai/cordis@4.0.1'
   - '@deepseek-ai/cosmokit@1.8.2'

@@ -6,15 +6,15 @@
 
 前置要求：
 
-- 已安装的 **dsh**（v0.1.0-rc.6+），`dsh` 在 PATH 上
+- 已安装的 **dsh**（v0.1.0-rc.6 起，含 v0.2.0-rc.2），`dsh` 在 PATH 上
 - **pnpm**（v11+）与 Node.js 20+
 
-> ⚠️ 本项目依赖**与 dsh 安装树共享同一模块实例**的 `@deepseek-ai/dsh-typert-protocol` 与
-> `cordis`（见 README「依赖链接」一节）。**每次 `pnpm install` 后必须重跑**：
+> ℹ️ `@deepseek-ai/dsh-typert-protocol` 是 **peerDependency**，由正在运行的 dsh 安装树
+> 提供（见 README「模块实例一致性」）。仓库的 `autoInstallPeers: false` 保证
+> `pnpm install` 不会拉一个会遮蔽运行时实例的本地副本，因此**不再需要 `link-deps`**。
 
 ```bash
-pnpm install          # 安装 esbuild 等构建依赖
-pnpm run link-deps    # 重建指向 dsh 安装树的符号链接（install 会覆盖它们）
+pnpm install          # 只装 esbuild 等构建依赖
 pnpm build            # 产出 dist/index.js + dist/client.js
 node scripts/smoke-test.mjs   # 纯函数冒烟测试（CI 同款）
 ```
@@ -45,7 +45,7 @@ lib/aggregate.js    # JSONL 解析、(turn,step) 去重、维度聚合
 lib/pricing.js      # 价格表驱动成本估算
 lib/client.js       # Browser：Settings「用量统计」看板
 scripts/build.mjs   # esbuild 构建（host + client 双 bundle）
-scripts/link-deps.sh# 重建 dsh 安装树符号链接
+scripts/link-deps.sh# 可选：直连 lib/index.js 调试时的依赖链接
 scripts/smoke-test.mjs  # CI 冒烟测试
 ```
 
