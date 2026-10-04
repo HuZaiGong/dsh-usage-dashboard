@@ -127,8 +127,8 @@ import("./lib/scan.js").then(async (scan) => {
 - [x] 0.1.3 安全修复（esbuild 升级 GHSA-67mh-4wv8-2f99、依赖版本锁定、fzstd 解码大小守卫）
 - [x] 已发布 npm（0.1.x，组织 @huzaigong 归属）；GitHub Actions 自动构建 + 发布
 - [x] 安装进 web profile 实测（Host RPC + Settings 看板均已在运行实例验证）
-- [x] 兼容 dsh 0.2.0-rc.2：`@deepseek-ai/dsh-typert-protocol` 改为 peerDependency，
+- [x] 0.1.5 兼容 dsh 0.2.0-rc.2：`@deepseek-ai/dsh-typert-protocol` 改为 peerDependency，
       移除对符号链接（`link-deps`）的依赖，打包桌面版（dsh 树在 `app.asar` 内）同样适用
-- [x] 兼容 dsh 0.2.0-rc.2 会话格式 v4：日志名为 `session.v4.jsonl.zstd`（原来只认
+- [x] 0.1.5 兼容 dsh 0.2.0-rc.2 会话格式 v4：日志名为 `session.v4.jsonl.zstd`（原来只认
       `session.jsonl.zstd`，导致扫不到会话、看板空白且不报错）；同时修复 Windows 下
       `sessionId` 取值错误与 `build.mjs` 的 `URL.pathname` 构建失败
