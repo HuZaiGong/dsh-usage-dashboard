@@ -55,7 +55,7 @@ import { Remote, TypertRemoteService } from "@deepseek-ai/dsh-typert-protocol";
 // lib/scan.js
 import { execFileSync } from "node:child_process";
 import { readdirSync, statSync, readFileSync as readFileSync2 } from "node:fs";
-import { join as join2 } from "node:path";
+import { basename, join as join2 } from "node:path";
 
 // node_modules/.pnpm/fzstd@0.1.1/node_modules/fzstd/esm/index.mjs
 var ab = ArrayBuffer;
@@ -679,7 +679,7 @@ function decompress(dat, buf) {
 }
 
 // lib/scan.js
-var SESSION_FILE = "session.jsonl.zstd";
+var SESSION_FILE_RE = /^session(\.[A-Za-z0-9_-]+)?\.jsonl\.zstd$/;
 function discoverSessions(sessionsRoot) {
   const out = [];
   const walk = (dir, workspace) => {
@@ -692,12 +692,12 @@ function discoverSessions(sessionsRoot) {
     for (const e of entries) {
       const p = join2(dir, e.name);
       if (e.isDirectory()) walk(p, workspace);
-      else if (e.isFile() && e.name === SESSION_FILE) {
+      else if (e.isFile() && SESSION_FILE_RE.test(e.name)) {
         const st = statSync(p);
         out.push({
           path: p,
           workspace,
-          sessionId: dir.slice(dir.lastIndexOf("/") + 1),
+          sessionId: basename(dir),
           mtimeMs: st.mtimeMs,
           size: st.size
         });

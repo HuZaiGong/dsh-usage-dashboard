@@ -2,12 +2,18 @@
 // @Remote 装饰器（TC39）由 esbuild 原生支持；构建前先安装 esbuild。
 import { build } from 'esbuild'
 import { mkdirSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
-mkdirSync(new URL('../dist/', import.meta.url), { recursive: true })
+// 用 fileURLToPath 而非 URL.pathname：后者在 Windows 上会得到 `/C:/...`
+// （带前导斜杠），esbuild 无法解析。
+const libFile = (name) => fileURLToPath(new URL(`../lib/${name}`, import.meta.url))
+const distFile = (name) => fileURLToPath(new URL(`../dist/${name}`, import.meta.url))
+
+mkdirSync(fileURLToPath(new URL('../dist/', import.meta.url)), { recursive: true })
 
 await build({
-  entryPoints: [new URL('../lib/index.js', import.meta.url).pathname],
-  outfile: new URL('../dist/index.js', import.meta.url).pathname,
+  entryPoints: [libFile('index.js')],
+  outfile: distFile('index.js'),
   bundle: true,             // 打包内部模块（scan/aggregate/pricing）
   external: ['@deepseek-ai/dsh-typert-protocol'],
   format: 'esm',
@@ -35,8 +41,8 @@ const clientFooter = `
 `
 
 await build({
-  entryPoints: [new URL('../lib/client.js', import.meta.url).pathname],
-  outfile: new URL('../dist/client.js', import.meta.url).pathname,
+  entryPoints: [libFile('client.js')],
+  outfile: distFile('client.js'),
   bundle: true,            // client 半需要打包（浏览器无 node 模块解析）
   format: 'cjs',           // factory 形式，exports 由 __ModuleLoader__ 物化时消费
   platform: 'browser',
